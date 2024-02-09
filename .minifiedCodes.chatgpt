@@ -1,0 +1,5 @@
+<"file: error.txt">Error minifying install.sh: Unsupported file format
+Error minifying Makefile: Unsupported file format
+Error minifying src/update_getsysinfo.zsh: Unsupported file format
+Error minifying src/getsysinfo.zsh: Unsupported file format</"file: error.txt">
+
