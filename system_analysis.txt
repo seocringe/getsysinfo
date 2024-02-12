@@ -57,6 +57,6 @@ To show all installed unit files use 'systemctl list-unit-files'.
 
 Список автозагружаемых программ в GNOME:
 итого 4
--rwxr-xr-x 1 ars ars 463 фев  9 15:14 io.github.tdesktop_x64.TDesktop.desktop
+-rwxr-xr-x 1 ars ars 463 фев  9 17:14 io.github.tdesktop_x64.TDesktop.desktop
 
 

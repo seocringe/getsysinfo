@@ -1,55 +1,10 @@
-#!/bin/bash
-
-# Function to convert xml to json using xml2json and jq
-xml_to_json() {
-  local xml_file="$1"
-  xml2json < "$xml_file" | jq -c .
-}
-
-# Function to convert csv to json using csvjson and jq
-csv_to_json() {
-  local csv_file="$1"
-  csvjson < "$csv_file" | jq -c .
-}
-
-# Function to format df output to json
-df_to_json() {
-  awk 'NR>1 {print "{\"target\":\""$1"\", \"size\":\""$2"\", \"used\":\""$3"\", \"available\":\""$4"\", \"used_percent\":\""$5"\", \"filesystem_type\":\""$6"\"}"}' "$1" | jq -s -c .
-}
-
-# Function to format free output to json
-free_to_json() {
-  awk 'NR>1 {print "{\"type\":\""$1"\", \"total\":\""$2"\", \"used\":\""$3"\", \"free\":\""$4"\", \"shared\":\""$5"\", \"buff_cache\":\""$6"\", \"available\":\""$7"\"}"}' "$1" | jq -s -c .
-}
-
-sysinfo_dir="/path/to/sysinfo_dir"
-json_output="$sysinfo_dir/dmidecode.json"
-output_name="sysinfo_$(date +%Y-%m-%d_%H-%M-%S).json"
-destination="/home/ars/documents/arsh/$output_name"
-
-# Create sysinfo_dir if it doesn't exist
-mkdir -p "$sysinfo_dir"
-
-# Combine all files into a single JSON document
-cat <<EOF > "$sysinfo_dir/combined.json"
-{
-  "lshw": $(xml_to_json "$sysinfo_dir/lshw.xml"),
-  "lscpu": $(jq -c . < "$sysinfo_dir/lscpu.json"),
-  "lsblk": $(jq -c . < "$sysinfo_dir/lsblk.json"),
-  "lspci": $(csv_to_json "$sysinfo_dir/lspci.csv"),
-  "df": $(df_to_json "$sysinfo_dir/df.txt"),
-  "free": $(free_to_json "$sysinfo_dir/free.txt"),
-  "shell_history": $(jq -R -s -c 'split("\n") | map(select(length > 0))' < "$sysinfo_dir/shell_history.txt"),
-  "dmidecode": $(cat "$json_output")
-}
-EOF
-
-# Copy the combined JSON to a specific location with a timestamped name
-cp "$sysinfo_dir/combined.json" "$destination"
-
-echo "System data written to: $destination"
-
-# Clean up temporary files
-rm -rf "$sysinfo_dir"
-
-exit 0
+#!/bin/zsh
+[[ $(id -u) != 0 ]]&&{ echo "This operation requires superuser privileges.";sudo -v||{ echo "Superuser verification failed.";exit 1;};}
+d="$HOME/tmp/.ags";a="/home/ars/archives/";r="/home/ars/documents/arsh"
+collect_system_data(){ sudo sh -c "mkdir -p '$d'&&chmod 755 '$d'&&lshw -xml >'$d/lshw.xml'&&lscpu --json >'$d/lscpu.json'&&lsblk -J >'$d/lsblk.json'&&lspci -mm >'$d/lspci.csv'&&lsusb -t >'$d/lsusb.txt'&&df --output=target,size,used,avail,pcent,fstype >'$d/df.txt'&&free -blw >'$d/free.txt'&&find /home \( -name .bash_history -o -name .zsh_history \) -exec sh -c 'echo \"{}:\"; cat {}' \; 2>/dev/null >'$d/shell_history.txt'&&dmidecode >'$d/dmidecode.txt'";}
+create_json_files(){ f="$d/dmidecode.txt";j="$d/dmidecode.json";h="";p=0;while IFS= read -r l; do [[ $l == Handle* ]]&&{ [[ $p -eq 0 ]]&&echo "},";h=${l#Handle };h=${h%%,*};echo "\"$h\":{";p=1;}||[[ $l == *:* && $p -eq 0 ]]&&echo ",";[[ $l == *:* ]]&&{ k=${l%%:*};v=${l#*: };v=${v//\"/\\\"};printf "\"%s\":\"%s\"" "${k// /}" "$v";p=0;};done <"$f"|sed 's/,{'/'{'/g' >"$j";echo "}" >>"$j";}
+generate_combined_json(){ sudo sh -c "cat <<EOF >'$d/combined.json'{\"lshw\":\$(cat '$d/lshw.xml'|xml2json|jq -c .),\"dmidecode\":\$(cat '$j')}EOF";}
+collect_system_data
+[[ -f "$d/dmidecode.txt" ]]&&create_json_files||echo "dmidecode.txt does not exist, skipping dmidecode JSON conversion."
+generate_combined_json
+t=$(date +%Y-%m-%d_%H-%M-%S);o="sysinfo_$t.json";sudo sh -c "mkdir -p '$r'&&mv '$d/combined.json' '$r/$o'&&echo 'System data written to: $r/$o'||{ echo 'Failed to move combined JSON to $r/$o.';exit 1;};mkdir -p '$a'&&tar -czf '$a/sysinfo_archive_$t.tar.gz' -C '$d' .&&echo 'Данные системы заархивированы в: $a/sysinfo_archive_$t.tar.gz'&&rm -rf '$d';"
