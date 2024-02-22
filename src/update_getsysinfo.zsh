@@ -1,17 +1,20 @@
 #!/bin/sh
 
-# Определяем путь к локальному репозиторию
-REPO_DIR="/home/ars/gh/getsysinfo"
+# Определяем путь к директории, где находится этот скрипт
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Предполагаем, что имя главного скрипта - getsysinfo.zsh и он находится в той же директории
 EXECUTABLE_NAME="getsysinfo"
 
-# Переходим в директорию репозитория
-cd "$REPO_DIR" || exit
+echo "Переходим в директорию скрипта: $REPO_DIR"
+cd "$REPO_DIR" || { echo "Ошибка: Невозможно перейти в директорию $REPO_DIR"; exit 1; }
 
-# Выполняем git pull для получения последних изменений
-git pull origin main
+echo "Получаем последние изменения из git..."
+git pull origin main || { echo "Ошибка: Не удалось выполнить git pull"; exit 1; }
 
-# Убедимся, что скрипт исполняемый
-chmod +x "getsysinfo.zsh"
+echo "Устанавливаем права на выполнение скрипта..."
+chmod +x "${EXECUTABLE_NAME}.zsh" || { echo "Ошибка: Не удалось установить права на выполнение"; exit 1; }
 
-# Копируем исполняемый файл в /usr/bin, перезаписываем если он уже там есть
-sudo cp -f "getsysinfo.zsh" "/usr/bin/$EXECUTABLE_NAME"
+echo "Копируем исполняемый файл в /usr/bin/"
+sudo cp -f "${EXECUTABLE_NAME}.zsh" "/usr/bin/${EXECUTABLE_NAME}" || { echo "Ошибка: Не удалось скопировать файл"; exit 1; }
+
+echo "Обновление системной информации выполнено успешно."

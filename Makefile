@@ -4,11 +4,11 @@ SHELL := /bin/sh
 # Задаем переменные для пути установки плагина
 SRC := src
 REAL_HOME ?= $(HOME)
-ZSH_CUSTOM_PATH ?= $(REAL_HOME)/.oh-my-zsh/custom
-PLUGIN_NAME := arshcollectdata
+PLUGIN_NAME := getsysinfo
+ZSH_CUSTOM_PATH ?= $(realpath $(REAL_HOME)/.oh-my-zsh/custom)
 PLUGIN_PATH := $(ZSH_CUSTOM_PATH)/plugins/$(PLUGIN_NAME)
 
-.PHONY: install
+.PHONY: install uninstall
 
 # Определение цели "install"
 install:
@@ -20,7 +20,8 @@ install:
 	fi; \
 	echo "Домашняя директория: $$REAL_HOME"; \
 	\
-	PLUGIN_PATH="${ZSH_CUSTOM:-$$REAL_HOME/.oh-my-zsh/custom}/plugins/$(PLUGIN_NAME)"; \
+	ZSH_CUSTOM_PATH=$${ZSH_CUSTOM:-$$REAL_HOME/.oh-my-zsh/custom}; \
+	PLUGIN_PATH=$$(realpath $$ZSH_CUSTOM_PATH)/plugins/$(PLUGIN_NAME); \
 	echo "Путь для установки плагина: $$PLUGIN_PATH"; \
 	\
 	echo "Создаем директорию для плагина..."; \
@@ -36,3 +37,13 @@ install:
 	echo "Устанавливаем правильные разрешения для директории плагина..."; \
 	chmod -R 755 "$$PLUGIN_PATH"; \
 	echo "Разрешения установлены."
+
+# Определение цели "uninstall"
+uninstall:
+	@echo "Удаление плагина $(PLUGIN_NAME) из пути $$PLUGIN_PATH..."
+	@if [ -d "$(PLUGIN_PATH)" ]; then \
+		rm -rf "$(PLUGIN_PATH)"; \
+		echo "Плагин $(PLUGIN_NAME) успешно удален."; \
+	else \
+		echo "Плагин $(PLUGIN_NAME) не найден."; \
+	fi;
